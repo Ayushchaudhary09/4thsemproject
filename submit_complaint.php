@@ -19,6 +19,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $old = ['title' => $title, 'category' => $category, 'description' => $description, 'anonymous' => $anonymous];
 
+    /* ---------- Evidence upload ---------- */
+    $evidencePath = null;
+    if (isset($_FILES['evidence']) && $_FILES['evidence']['error'] === UPLOAD_ERR_OK) {
+        $file = $_FILES['evidence'];
+        $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+        $maxSize = 5 * 1024 * 1024; // 5MB
+
+        if (!in_array($file['type'], $allowedTypes)) {
+            $errors['evidence'] = 'Only JPG, PNG, GIF, WebP or PDF files are allowed.';
+        } elseif ($file['size'] > $maxSize) {
+            $errors['evidence'] = 'File size must be 5MB or less.';
+        } else {
+            $uploadDir = __DIR__ . '/uploads/complaints';
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0755, true);
+            }
+            $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+            $evidencePath = 'uploads/complaints/' . uniqid('ev_', true) . '.' . $ext;
+            if (!move_uploaded_file($file['tmp_name'], __DIR__ . '/' . $evidencePath)) {
+                $errors['evidence'] = 'Failed to upload file. Please try again.';
+                $evidencePath = null;
+            }
+        }
+    }
+
     /* ---------- Validation ---------- */
     if ($title === '') {
         $errors['title'] = 'This field is required.';
@@ -45,16 +70,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $complaintId = generate_complaint_id();
 
         $stmt = db()->prepare(
-            "INSERT INTO complaints (complaint_id, user_id, title, description, category, anonymous, status)
-             VALUES (:cid, :uid, :title, :desc, :cat, :anon, 'pending')"
+            "INSERT INTO complaints (complaint_id, user_id, title, description, category, anonymous, status, evidence)
+             VALUES (:cid, :uid, :title, :desc, :cat, :anon, 'pending', :evidence)"
         );
         $stmt->execute([
-            ':cid'   => $complaintId,
-            ':uid'   => (int) $current_user['id'],
-            ':title' => $title,
-            ':desc'  => $description,
-            ':cat'   => $category,
-            ':anon'  => $anonymous,
+            ':cid'      => $complaintId,
+            ':uid'      => (int) $current_user['id'],
+            ':title'    => $title,
+            ':desc'     => $description,
+            ':cat'      => $category,
+            ':anon'     => $anonymous,
+            ':evidence' => $evidencePath,
         ]);
 
         set_flash('success', 'Complaint submitted successfully. Your Complaint ID is ' . $complaintId);
@@ -77,7 +103,7 @@ include __DIR__ . '/includes/header.php';
         </div>
       </div>
 
-      <form action="submit_complaint.php" method="POST" data-validate-form novalidate style="margin-top:24px;">
+      <form action="submit_complaint.php" method="POST" data-validate-form novalidate enctype="multipart/form-data" style="margin-top:24px;">
         <div class="form-group <?php echo isset($errors['title']) ? 'invalid' : ''; ?>" data-validate="required">
           <label for="title">Complaint Title</label>
           <input type="text" id="title" name="title" value="<?php echo e($old['title']); ?>" placeholder="e.g. Broken projector in Room 204" />
@@ -99,6 +125,13 @@ include __DIR__ . '/includes/header.php';
           <label for="description">Detailed Description</label>
           <textarea id="description" name="description" rows="6" placeholder="Describe your concern in detail..."><?php echo e($old['description']); ?></textarea>
           <span class="field-error"><?php echo e($errors['description'] ?? 'This field is required.'); ?></span>
+        </div>
+
+        <div class="form-group <?php echo isset($errors['evidence']) ? 'invalid' : ''; ?>">
+          <label for="evidence">Upload Evidence (optional)</label>
+          <input type="file" id="evidence" name="evidence" accept="image/jpeg,image/png,image/gif,image/webp,application/pdf" style="height:auto;padding:12px 16px;" />
+          <span class="field-error"><?php echo e($errors['evidence'] ?? 'Only JPG, PNG, GIF, WebP or PDF files are allowed (max 5MB).'); ?></span>
+          <small style="color:var(--muted);font-size:0.78rem;margin-top:4px;display:block;">Attach a photo or document as evidence. Max 5MB.</small>
         </div>
 
         <label class="checkbox-group" for="anonymous">

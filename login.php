@@ -11,7 +11,7 @@ start_session();
 
 // Already logged in? Redirect accordingly.
 if (isset($_SESSION['user_id'])) {
-    redirect($_SESSION['role'] === 'admin' ? 'admin/dashboard.php' : 'dashboard.php');
+    redirect(in_array($_SESSION['role'], ['admin', 'super_admin'], true) ? 'admin/dashboard.php' : 'dashboard.php');
 }
 
 $errors = [];
@@ -43,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['role']    = $user['role'];
 
             set_flash('success', 'Login successful. Welcome back!');
-            redirect($user['role'] === 'admin' ? 'admin/dashboard.php' : 'dashboard.php');
+            redirect(in_array($user['role'], ['admin', 'super_admin'], true) ? 'admin/dashboard.php' : 'dashboard.php');
         }
     }
 }
@@ -104,7 +104,12 @@ include __DIR__ . '/includes/navbar.php';
 
           <div class="form-group" data-validate="required">
             <label for="password">Password</label>
-            <input type="password" id="password" name="password" autocomplete="current-password" />
+            <div class="input-wrapper">
+              <input type="password" id="password" name="password" autocomplete="current-password" />
+              <button type="button" class="toggle-eye" aria-label="Show password">
+                <i class="fa-regular fa-eye"></i>
+              </button>
+            </div>
             <span class="field-error">Password is required.</span>
           </div>
 

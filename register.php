@@ -11,7 +11,7 @@ require_once __DIR__ . '/includes/functions.php';
 start_session();
 
 if (isset($_SESSION['user_id'])) {
-    redirect($_SESSION['role'] === 'admin' ? 'admin/dashboard.php' : 'dashboard.php');
+    redirect(in_array($_SESSION['role'], ['admin', 'super_admin'], true) ? 'admin/dashboard.php' : 'dashboard.php');
 }
 
 $errors = [];

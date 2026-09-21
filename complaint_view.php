@@ -75,6 +75,21 @@ include __DIR__ . '/includes/header.php';
           <strong>Description</strong>
           <?php echo nl2br(e($complaint['description'])); ?>
         </div>
+
+        <?php if (!empty($complaint['evidence'])): ?>
+          <div style="margin-top:20px;">
+            <strong style="font-size:0.85rem;color:var(--muted);display:block;margin-bottom:8px;">Attached Evidence</strong>
+            <?php if (preg_match('/\.(jpg|jpeg|png|gif|webp)$/i', $complaint['evidence'])): ?>
+              <a href="<?php echo e($complaint['evidence']); ?>" target="_blank" rel="noopener">
+                <img src="<?php echo e($complaint['evidence']); ?>" alt="Evidence" style="max-width:100%;max-height:400px;border-radius:var(--radius-sm);border:1px solid var(--border);cursor:pointer;" />
+              </a>
+            <?php else: ?>
+              <a href="<?php echo e($complaint['evidence']); ?>" target="_blank" rel="noopener" class="btn btn-outline btn-sm">
+                <i class="fa-solid fa-file-pdf"></i> View Evidence
+              </a>
+            <?php endif; ?>
+          </div>
+        <?php endif; ?>
       </div>
 
       <!-- ===== Admin remark ===== -->

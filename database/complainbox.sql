@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS complaints (
   anonymous    TINYINT(1)   NOT NULL DEFAULT 0,
   status       ENUM('pending','review','approved','resolved','rejected') NOT NULL DEFAULT 'pending',
   admin_remark TEXT         NULL,
+  evidence     VARCHAR(255) NULL,
   created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
@@ -79,12 +80,12 @@ CREATE TABLE IF NOT EXISTS complaints (
 -- ------------------------------------------------------------
 INSERT INTO users (full_name, email, password, phone, role, status)
 VALUES
-  ('Sadiksha Shah', 'sadikshashah125@gmail.com', '$2y$10$GQS5GzvewZ9E.ErPdkbLFuFeV8XuEiBopb2Lz2i0JWZQntYi6H4Va', '9812345678', 'super_admin', 'active')
+  ('Sadiksha Shah', 'sadikshashah.081@kathford.edu.np', '$2y$10$vGOQjMZ1/YITXgOhypFh/.BgSJR29azQKAvj/PBkF.PvTFsZWCh1C', '9812345678', 'super_admin', 'active')
 ON DUPLICATE KEY UPDATE id = id;
 
 -- Upgrade an existing 'admin' row (created by older schema) to super_admin.
 UPDATE users SET role = 'super_admin'
-WHERE email = 'sadikshashah125@gmail.com' AND role <> 'super_admin';
+WHERE email = 'sadikshashah.081@kathford.edu.np' AND role <> 'super_admin';
 
 -- ------------------------------------------------------------
 -- SAMPLE / DEMO DATA (optional — clearly marked)

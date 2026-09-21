@@ -33,7 +33,7 @@ $use_navbar = $use_navbar ?? false;
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
 
 <!-- Global styles -->
-  <link rel="stylesheet" href="<?php echo $base_path; ?>assets/css/style.css" />
+  <link rel="stylesheet" href="<?php echo $base_path; ?>css/style.css" />
 </head>
 <body>
 <?php

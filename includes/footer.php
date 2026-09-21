@@ -16,6 +16,6 @@ declare(strict_types=1);
     </div>
   </footer>
 
-<script src="<?php echo $base_path; ?>assets/js/script.js"></script>
+<script src="<?php echo $base_path; ?>js/script.js"></script>
 </body>
 </html>
