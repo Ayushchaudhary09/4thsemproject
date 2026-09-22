@@ -11,7 +11,7 @@ require_once __DIR__ . '/includes/functions.php';
 start_session();
 
 if (isset($_SESSION['user_id'])) {
-    redirect(in_array($_SESSION['role'], ['admin', 'super_admin'], true) ? 'admin/dashboard.php' : 'dashboard.php');
+    redirect(($_SESSION['account'] ?? 'user') === 'admin' ? 'admin/dashboard.php' : 'dashboard.php');
 }
 
 $errors = [];
@@ -72,16 +72,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     /* ---------- Insert if no errors ---------- */
     if (empty($errors)) {
-        $hash = password_hash($password, PASSWORD_DEFAULT);
-
         $stmt = db()->prepare(
-            "INSERT INTO users (full_name, email, password, phone, role)
+            "INSERT INTO user (full_name, email, password, phone, role)
              VALUES (:full_name, :email, :password, :phone, :role)"
         );
         $stmt->execute([
             ':full_name' => $full_name,
             ':email'     => $email,
-            ':password'  => $hash,
+            ':password'  => $password,
             ':phone'     => $phone,
             ':role'      => $role,
         ]);

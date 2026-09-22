@@ -13,10 +13,12 @@ $db = db();
 $search = trim($_GET['search'] ?? '');
 $status = clean($_GET['status'] ?? '');
 
-$sql = "SELECT c.id, c.complaint_id, c.title, c.category, c.status, c.anonymous, c.created_at,
-               u.full_name
+$sql = "SELECT c.id, c.complaint_id, c.title, ct.category_name AS category,
+               s.status_name AS status, c.anonymous, c.created_at, u.full_name, u.email
         FROM complaints c
-        JOIN users u ON u.id = c.user_id
+        JOIN user u ON u.id = c.user_id
+        JOIN status s ON s.id = c.status_id
+        JOIN categories ct ON ct.id = c.category_id
         WHERE 1=1";
 $params = [];
 
@@ -25,8 +27,8 @@ if ($search !== '') {
     $params[':search'] = '%' . $search . '%';
 }
 
-if (in_array($status, ['pending', 'review', 'approved', 'resolved', 'rejected'], true)) {
-    $sql .= " AND c.status = :status";
+if (array_key_exists($status, complaint_statuses())) {
+    $sql .= " AND s.status_name = :status";
     $params[':status'] = $status;
 }
 

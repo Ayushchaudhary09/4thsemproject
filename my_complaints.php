@@ -11,8 +11,13 @@ require_once __DIR__ . '/includes/auth.php';
 $userId = (int) $current_user['id'];
 
 $stmt = db()->prepare(
-    "SELECT id, complaint_id, title, category, status, anonymous, created_at
-     FROM complaints WHERE user_id = :uid ORDER BY created_at DESC, id DESC"
+    "SELECT c.id, c.complaint_id, c.title, ct.category_name AS category,
+            s.status_name AS status, c.anonymous, c.created_at
+     FROM complaints c
+     JOIN status s ON s.id = c.status_id
+     JOIN categories ct ON ct.id = c.category_id
+     WHERE c.user_id = :uid
+     ORDER BY c.created_at DESC, c.id DESC"
 );
 $stmt->execute([':uid' => $userId]);
 $complaints = $stmt->fetchAll();

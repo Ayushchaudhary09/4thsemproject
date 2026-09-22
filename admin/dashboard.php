@@ -11,25 +11,32 @@ require_once __DIR__ . '/../includes/admin_auth.php';
 $db = db();
 
 /* ---------- Complaint stats by status ---------- */
-$stmt = $db->query("SELECT status, COUNT(*) AS cnt FROM complaints GROUP BY status");
+$stmt = $db->query(
+    "SELECT s.status_name, COUNT(c.id) AS cnt
+     FROM complaints c
+     JOIN status s ON s.id = c.status_id
+     GROUP BY s.id, s.status_name"
+);
 $statusCounts = ['pending' => 0, 'review' => 0, 'approved' => 0, 'resolved' => 0, 'rejected' => 0];
 $total = 0;
 foreach ($stmt->fetchAll() as $row) {
-    $statusCounts[$row['status']] = (int) $row['cnt'];
+    $statusCounts[$row['status_name']] = (int) $row['cnt'];
     $total += (int) $row['cnt'];
 }
 $statusCounts['total'] = $total;
 
 /* ---------- User stats ---------- */
-$userStmt = $db->query("SELECT COUNT(*) AS cnt FROM users");
+$userStmt = $db->query("SELECT COUNT(*) AS cnt FROM user");
 $totalUsers = (int) $userStmt->fetchColumn();
 
 /* ---------- Recent complaints ---------- */
 $recentStmt = $db->prepare(
-    "SELECT c.id, c.complaint_id, c.title, c.category, c.status, c.anonymous, c.created_at,
-            u.full_name
+    "SELECT c.id, c.complaint_id, c.title, ct.category_name AS category,
+            s.status_name AS status, c.anonymous, c.created_at, u.full_name
      FROM complaints c
-     JOIN users u ON u.id = c.user_id
+     JOIN user u ON u.id = c.user_id
+     JOIN status s ON s.id = c.status_id
+     JOIN categories ct ON ct.id = c.category_id
      ORDER BY c.created_at DESC, c.id DESC LIMIT 6"
 );
 $recentStmt->execute();

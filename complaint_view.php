@@ -14,8 +14,10 @@ $userId = (int) $current_user['id'];
 
 /* Enforce ownership — include user_id in the WHERE clause. */
 $stmt = db()->prepare(
-    "SELECT c.*, c.admin_remark
+    "SELECT c.*, c.admin_remark, s.status_name AS status, ct.category_name AS category
      FROM complaints c
+     JOIN status s ON s.id = c.status_id
+     JOIN categories ct ON ct.id = c.category_id
      WHERE c.id = :id AND c.user_id = :uid LIMIT 1"
 );
 $stmt->execute([':id' => $id, ':uid' => $userId]);
@@ -79,7 +81,7 @@ include __DIR__ . '/includes/header.php';
         <?php if (!empty($complaint['evidence'])): ?>
           <div style="margin-top:20px;">
             <strong style="font-size:0.85rem;color:var(--muted);display:block;margin-bottom:8px;">Attached Evidence</strong>
-            <?php if (preg_match('/\.(jpg|jpeg|png|gif|webp)$/i', $complaint['evidence'])): ?>
+            <?php if (preg_match('/\.(jpg|jpeg|png|gif|webp|avif|bmp)$/i', $complaint['evidence'])): ?>
               <a href="<?php echo e($complaint['evidence']); ?>" target="_blank" rel="noopener">
                 <img src="<?php echo e($complaint['evidence']); ?>" alt="Evidence" style="max-width:100%;max-height:400px;border-radius:var(--radius-sm);border:1px solid var(--border);cursor:pointer;" />
               </a>

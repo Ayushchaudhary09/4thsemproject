@@ -17,19 +17,14 @@ $brand_href = 'dashboard.php';
 
 start_session();
 
-if (!isset($_SESSION['user_id']) || !isset($_SESSION['role'])) {
+if (!isset($_SESSION['user_id']) || ($_SESSION['account'] ?? '') !== 'admin') {
     redirect('../login.php');
-}
-
-if (!is_admin_role($_SESSION['role'])) {
-    set_flash('error', 'You are not authorized to access this page.');
-    redirect('../dashboard.php');
 }
 
 // Load the current admin from the database (fresh data).
 $stmt = db()->prepare(
     "SELECT id, full_name, email, password, phone, role, status, created_at
-     FROM users WHERE id = :id LIMIT 1"
+     FROM admin WHERE id = :id LIMIT 1"
 );
 $stmt->execute([':id' => $_SESSION['user_id']]);
 $current_user = $stmt->fetch();

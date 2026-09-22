@@ -17,20 +17,29 @@ $stats = [
 ];
 
 $stmt = $db->prepare(
-    "SELECT status, COUNT(*) AS cnt FROM complaints WHERE user_id = :uid GROUP BY status"
+    "SELECT s.status_name, COUNT(c.id) AS cnt
+     FROM complaints c
+     JOIN status s ON s.id = c.status_id
+     WHERE c.user_id = :uid
+     GROUP BY s.id, s.status_name"
 );
 $stmt->execute([':uid' => $userId]);
 foreach ($stmt->fetchAll() as $row) {
     $stats['total'] += (int) $row['cnt'];
-    if (isset($stats[$row['status']])) {
-        $stats[$row['status']] = (int) $row['cnt'];
+    if (isset($stats[$row['status_name']])) {
+        $stats[$row['status_name']] = (int) $row['cnt'];
     }
 }
 
 /* ---------- Recent complaints ---------- */
 $stmt = $db->prepare(
-    "SELECT id, complaint_id, title, category, status, anonymous, created_at
-     FROM complaints WHERE user_id = :uid ORDER BY created_at DESC, id DESC LIMIT 5"
+    "SELECT c.id, c.complaint_id, c.title, ct.category_name AS category,
+            s.status_name AS status, c.anonymous, c.created_at
+     FROM complaints c
+     JOIN status s ON s.id = c.status_id
+     JOIN categories ct ON ct.id = c.category_id
+     WHERE c.user_id = :uid
+     ORDER BY c.created_at DESC, c.id DESC LIMIT 5"
 );
 $stmt->execute([':uid' => $userId]);
 $recent = $stmt->fetchAll();

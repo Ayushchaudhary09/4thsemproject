@@ -423,6 +423,16 @@ main { flex: 1; }
 .form-group input[type="file"]:hover { border-color: #c9c2ae; }
 .form-group input[type="file"]:focus { border-color: var(--green); box-shadow: 0 0 0 4px rgba(27, 94, 58, 0.12); }
 
+.file-hint {
+  margin-top: 6px;
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  color: var(--green);
+  background: rgba(27, 94, 58, 0.08);
+  border: 1px dashed var(--green);
+  border-radius: var(--radius-sm);
+}
+
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
 
 .checkbox-group {

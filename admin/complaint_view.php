@@ -12,9 +12,12 @@ $id = (int) ($_GET['id'] ?? 0);
 $db = db();
 
 $stmt = $db->prepare(
-    "SELECT c.*, u.full_name, u.email, u.phone
+    "SELECT c.*, u.full_name, u.email, u.phone, s.status_name AS status,
+            ct.category_name AS category
      FROM complaints c
-     LEFT JOIN users u ON u.id = c.user_id
+     LEFT JOIN user u ON u.id = c.user_id
+     JOIN status s ON s.id = c.status_id
+     JOIN categories ct ON ct.id = c.category_id
      WHERE c.id = :id LIMIT 1"
 );
 $stmt->execute([':id' => $id]);
@@ -38,13 +41,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($errors)) {
         $stmt = db()->prepare(
             "UPDATE complaints
-             SET status = :status, admin_remark = :remark, updated_at = NOW()
+             SET status_id = :status_id, admin_remark = :remark, updated_at = NOW()
              WHERE id = :id"
         );
         $stmt->execute([
-            ':status' => $status,
-            ':remark' => $remark,
-            ':id'     => $id,
+            ':status_id' => status_id_by_name($status),
+            ':remark'    => $remark,
+            ':id'        => $id,
         ]);
 
         set_flash('success', 'Complaint updated successfully.');
@@ -111,7 +114,7 @@ include __DIR__ . '/../includes/header.php';
         <?php if (!empty($complaint['evidence'])): ?>
           <div style="margin-top:20px;">
             <strong style="font-size:0.85rem;color:var(--muted);display:block;margin-bottom:8px;">Attached Evidence</strong>
-            <?php if (preg_match('/\.(jpg|jpeg|png|gif|webp)$/i', $complaint['evidence'])): ?>
+            <?php if (preg_match('/\.(jpg|jpeg|png|gif|webp|avif|bmp)$/i', $complaint['evidence'])): ?>
               <a href="/4thsemproject/<?php echo e($complaint['evidence']); ?>" target="_blank" rel="noopener">
                 <img src="/4thsemproject/<?php echo e($complaint['evidence']); ?>" alt="Evidence" style="max-width:100%;max-height:400px;border-radius:var(--radius-sm);border:1px solid var(--border);cursor:pointer;" />
               </a>

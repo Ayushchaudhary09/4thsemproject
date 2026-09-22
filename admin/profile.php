@@ -29,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if (empty($errors)) {
-            $stmt = db()->prepare("UPDATE users SET full_name = :name, phone = :phone WHERE id = :id");
+            $stmt = db()->prepare("UPDATE admin SET full_name = :name, phone = :phone WHERE id = :id");
             $stmt->execute([
                 ':name'  => $full_name,
                 ':phone' => $phone,
@@ -43,11 +43,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $new_pw     = (string) ($_POST['new_password'] ?? '');
         $confirm_pw = (string) ($_POST['confirm_password'] ?? '');
 
-        $stmt = db()->prepare("SELECT password FROM users WHERE id = :id LIMIT 1");
+        $stmt = db()->prepare("SELECT password FROM admin WHERE id = :id LIMIT 1");
         $stmt->execute([':id' => (int) $current_user['id']]);
         $row = $stmt->fetch();
 
-        if (!$row || !password_verify($current_pw, $row['password'])) {
+        if (!$row || $current_pw !== $row['password']) {
             $errors['current_password'] = 'Your current password is incorrect.';
         }
         if (!validate_password($new_pw)) {
@@ -60,9 +60,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if (empty($errors)) {
-            $hash = password_hash($new_pw, PASSWORD_DEFAULT);
-            $stmt = db()->prepare("UPDATE users SET password = :hash WHERE id = :id");
-            $stmt->execute([':hash' => $hash, ':id' => (int) $current_user['id']]);
+            $stmt = db()->prepare("UPDATE admin SET password = :password WHERE id = :id");
+            $stmt->execute([':password' => $new_pw, ':id' => (int) $current_user['id']]);
             set_flash('success', 'Password changed successfully.');
             redirect('profile.php');
         }
@@ -72,7 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Refresh current user
 $stmt = db()->prepare(
     "SELECT id, full_name, email, password, phone, role, status, created_at
-     FROM users WHERE id = :id LIMIT 1"
+     FROM admin WHERE id = :id LIMIT 1"
 );
 $stmt->execute([':id' => (int) $current_user['id']]);
 $current_user = $stmt->fetch();

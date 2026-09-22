@@ -17,19 +17,14 @@ $brand_href = 'dashboard.php';
 
 start_session();
 
-if (!isset($_SESSION['user_id']) || !isset($_SESSION['role'])) {
+if (!isset($_SESSION['user_id']) || ($_SESSION['account'] ?? '') !== 'user') {
     redirect('login.php');
-}
-
-// Admins should not use the user dashboard.
-if (is_admin_role($_SESSION['role'])) {
-    redirect('admin/dashboard.php');
 }
 
 // Load the current user from the database (fresh data).
 $stmt = db()->prepare(
-    "SELECT id, full_name, email, password, phone, role, status, created_at
-     FROM users WHERE id = :id LIMIT 1"
+    "SELECT id, full_name, email, password, phone, role, status
+     FROM user WHERE id = :id LIMIT 1"
 );
 $stmt->execute([':id' => $_SESSION['user_id']]);
 $current_user = $stmt->fetch();

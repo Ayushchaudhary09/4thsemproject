@@ -62,6 +62,13 @@ function validateField(group) {
   const input = group.querySelector('input, select, textarea');
   if (!input) return true;
 
+  // File inputs are validated server-side (content type, size). Never block
+  // submission because one is optional.
+  if (input.type === 'file') {
+    group.classList.remove('invalid');
+    return true;
+  }
+
   const rule = group.dataset.validate || '';
   const value = (input.value || '').trim();
   let valid = true;
@@ -155,6 +162,28 @@ function initFormSubmit() {
   });
 }
 
+/* ---------- File input: show selected file name ---------- */
+function initFileInputs() {
+  $$('input[type="file"]').forEach((input) => {
+    input.addEventListener('change', () => {
+      const group = input.closest('.form-group');
+      if (!group) return;
+      let hint = group.querySelector('.file-hint');
+      if (input.files && input.files.length > 0) {
+        const f = input.files[0];
+        if (!hint) {
+          hint = document.createElement('div');
+          hint.className = 'file-hint';
+          group.appendChild(hint);
+        }
+        hint.textContent = 'Selected: ' + f.name + ' (' + (f.size / (1024 * 1024)).toFixed(2) + ' MB)';
+      } else if (hint) {
+        hint.remove();
+      }
+    });
+  });
+}
+
 /* ---------- Boot ---------- */
 document.addEventListener('DOMContentLoaded', () => {
   initNavToggle();
@@ -162,4 +191,5 @@ document.addEventListener('DOMContentLoaded', () => {
   initPasswordToggles();
   initValidation();
   initFormSubmit();
+  initFileInputs();
 });

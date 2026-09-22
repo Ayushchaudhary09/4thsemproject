@@ -14,7 +14,7 @@ $id = (int) ($_GET['id'] ?? 0);
 
 $stmt = $db->prepare(
     "SELECT u.*, (SELECT COUNT(*) FROM complaints c WHERE c.user_id = u.id) AS complaint_count
-     FROM users u WHERE u.id = :id LIMIT 1"
+     FROM user u WHERE u.id = :id LIMIT 1"
 );
 $stmt->execute([':id' => $id]);
 $user = $stmt->fetch();
@@ -31,16 +31,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (in_array($action, ['activate', 'deactivate'], true)) {
         $newStatus = $action === 'activate' ? 'active' : 'inactive';
-        $stmt = db()->prepare("UPDATE users SET status = :status WHERE id = :id");
+        $stmt = db()->prepare("UPDATE user SET status = :status WHERE id = :id");
         $stmt->execute([':status' => $newStatus, ':id' => $id]);
         set_flash('success', 'User account ' . $newStatus . 'd successfully.');
         redirect('user_view.php?id=' . $id);
     } elseif ($action === 'change_role') {
         $newRole = clean($_POST['role'] ?? '');
-        if (!in_array($newRole, ['student', 'employee', 'admin'], true)) {
+        if (!in_array($newRole, ['student', 'employee'], true)) {
             $errors['role'] = 'Please select a valid role.';
         } else {
-            $stmt = db()->prepare("UPDATE users SET role = :role WHERE id = :id");
+            $stmt = db()->prepare("UPDATE user SET role = :role WHERE id = :id");
             $stmt->execute([':role' => $newRole, ':id' => $id]);
             set_flash('success', 'User role updated successfully.');
             redirect('user_view.php?id=' . $id);
@@ -54,8 +54,10 @@ $user = $stmt->fetch();
 
 /* ---------- User's complaints ---------- */
 $cStmt = $db->prepare(
-    "SELECT id, complaint_id, title, category, status, anonymous, created_at
-     FROM complaints WHERE user_id = :uid ORDER BY created_at DESC, id DESC"
+    "SELECT c.id, c.complaint_id, c.title, s.status_name AS status, c.anonymous, c.created_at
+     FROM complaints c
+     JOIN status s ON s.id = c.status_id
+     WHERE c.user_id = :uid ORDER BY c.created_at DESC, c.id DESC"
 );
 $cStmt->execute([':uid' => $id]);
 $userComplaints = $cStmt->fetchAll();
@@ -101,10 +103,6 @@ include __DIR__ . '/../includes/header.php';
             <span class="detail-label">Total Complaints</span>
             <span class="detail-value"><?php echo $user['complaint_count']; ?></span>
           </li>
-          <li>
-            <span class="detail-label">Member Since</span>
-            <span class="detail-value"><?php echo e(nice_date($user['created_at'])); ?></span>
-          </li>
         </ul>
 
         <!-- ===== Admin actions (top admin only) ===== -->
@@ -118,7 +116,6 @@ include __DIR__ . '/../includes/header.php';
             <select id="role" name="role">
               <option value="student" <?php echo $user['role'] === 'student' ? 'selected' : ''; ?>>Student</option>
               <option value="employee" <?php echo $user['role'] === 'employee' ? 'selected' : ''; ?>>Employee</option>
-              <option value="admin" <?php echo $user['role'] === 'admin' ? 'selected' : ''; ?>>Admin</option>
             </select>
           </div>
           <button type="submit" class="btn btn-outline btn-sm">

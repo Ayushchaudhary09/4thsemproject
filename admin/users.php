@@ -13,9 +13,9 @@ $db = db();
 
 $search = trim($_GET['search'] ?? '');
 
-$sql = "SELECT u.id, u.full_name, u.email, u.phone, u.role, u.status, u.created_at,
+$sql = "SELECT u.id, u.full_name, u.email, u.phone, u.role, u.status,
                (SELECT COUNT(*) FROM complaints c WHERE c.user_id = u.id) AS complaint_count
-        FROM users u
+        FROM user u
         WHERE 1=1";
 $params = [];
 
@@ -24,7 +24,7 @@ if ($search !== '') {
     $params[':search'] = '%' . $search . '%';
 }
 
-$sql .= " ORDER BY u.created_at DESC, u.id DESC";
+$sql .= " ORDER BY u.id DESC";
 
 $stmt = $db->prepare($sql);
 $stmt->execute($params);
@@ -84,7 +84,7 @@ include __DIR__ . '/../includes/header.php';
                 <td><?php echo e($u['email']); ?></td>
                 <td><?php echo e($u['phone']); ?></td>
                 <td>
-                  <span class="role-badge <?php echo $u['role'] === 'admin' ? 'role-admin' : ($u['role'] === 'employee' ? 'role-employee' : 'role-student'); ?>">
+                  <span class="role-badge <?php echo $u['role'] === 'employee' ? 'role-employee' : 'role-student'; ?>">
                     <?php echo e(role_label($u['role'])); ?>
                   </span>
                 </td>

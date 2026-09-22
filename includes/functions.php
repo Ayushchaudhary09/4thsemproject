@@ -145,14 +145,23 @@ function password_complexity(string $password): bool
 }
 
 /**
- * Check if an email already exists in the database.
- * Returns the user id if it exists, otherwise null.
+ * Check if an email already exists in the database (user OR admin tables).
+ * Returns the id if it exists, otherwise null.
  */
 function email_exists(string $email): ?int
 {
-    $stmt = db()->prepare("SELECT id FROM users WHERE email = :email LIMIT 1");
-    $stmt->execute([':email' => strtolower(clean($email))]);
+    $email = strtolower(clean($email));
+
+    $stmt = db()->prepare("SELECT id FROM user WHERE email = :email LIMIT 1");
+    $stmt->execute([':email' => $email]);
     $id = $stmt->fetchColumn();
+
+    if (!$id) {
+        $stmt = db()->prepare("SELECT id FROM admin WHERE email = :email LIMIT 1");
+        $stmt->execute([':email' => $email]);
+        $id = $stmt->fetchColumn();
+    }
+
     return $id ? (int) $id : null;
 }
 
@@ -201,12 +210,14 @@ function status_label(string $status): string
 
 /**
  * Key => label pairs for status filter dropdowns (admin pages).
+ * Status values are stored in the normalized `status` table.
  */
 function complaint_statuses(): array
 {
     $pairs = [];
-    foreach (status_config() as $key => $cfg) {
-        $pairs[$key] = $cfg['label'];
+    $rows  = db()->query("SELECT status_name FROM status ORDER BY id")->fetchAll();
+    foreach ($rows as $row) {
+        $pairs[$row['status_name']] = status_label($row['status_name']);
     }
     return $pairs;
 }
@@ -217,26 +228,45 @@ function status_class(string $status): string
     return $cfg[$status]['class'] ?? 'status-pending';
 }
 
+/**
+ * Resolve a status name (e.g. 'pending') to its status table id.
+ */
+function status_id_by_name(string $status): ?int
+{
+    $stmt = db()->prepare("SELECT id FROM status WHERE status_name = :name LIMIT 1");
+    $stmt->execute([':name' => $status]);
+    $id = $stmt->fetchColumn();
+    return $id ? (int) $id : null;
+}
+
 /* ---------- Complaint categories ---------- */
+/**
+ * Name => label pairs. Categories live in the `categories` table.
+ */
 function complaint_categories(): array
 {
-    return [
-        'academic'       => 'Academic',
-        'infrastructure' => 'Infrastructure',
-        'faculty'        => 'Faculty',
-        'administration' => 'Administration',
-        'hostel'         => 'Hostel',
-        'library'        => 'Library',
-        'laboratory'     => 'Laboratory',
-        'harassment'     => 'Harassment',
-        'other'          => 'Other',
-    ];
+    $pairs = [];
+    $rows  = db()->query("SELECT category_name FROM categories ORDER BY id")->fetchAll();
+    foreach ($rows as $row) {
+        $pairs[$row['category_name']] = category_label($row['category_name']);
+    }
+    return $pairs;
 }
 
 function category_label(string $category): string
 {
-    $cats = complaint_categories();
-    return $cats[$category] ?? ucfirst($category);
+    return ucfirst(str_replace('_', ' ', $category));
+}
+
+/**
+ * Resolve a category name (e.g. 'academic') to its categories table id.
+ */
+function category_id_by_name(string $category): ?int
+{
+    $stmt = db()->prepare("SELECT id FROM categories WHERE category_name = :name LIMIT 1");
+    $stmt->execute([':name' => $category]);
+    $id = $stmt->fetchColumn();
+    return $id ? (int) $id : null;
 }
 
 /* ---------- Role labels ---------- */

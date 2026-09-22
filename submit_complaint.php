@@ -23,23 +23,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $evidencePath = null;
     if (isset($_FILES['evidence']) && $_FILES['evidence']['error'] === UPLOAD_ERR_OK) {
         $file = $_FILES['evidence'];
-        $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
         $maxSize = 5 * 1024 * 1024; // 5MB
 
-        if (!in_array($file['type'], $allowedTypes)) {
-            $errors['evidence'] = 'Only JPG, PNG, GIF, WebP or PDF files are allowed.';
-        } elseif ($file['size'] > $maxSize) {
+        if ($file['size'] > $maxSize) {
             $errors['evidence'] = 'File size must be 5MB or less.';
         } else {
-            $uploadDir = __DIR__ . '/uploads/complaints';
-            if (!is_dir($uploadDir)) {
-                mkdir($uploadDir, 0755, true);
-            }
-            $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-            $evidencePath = 'uploads/complaints/' . uniqid('ev_', true) . '.' . $ext;
-            if (!move_uploaded_file($file['tmp_name'], __DIR__ . '/' . $evidencePath)) {
-                $errors['evidence'] = 'Failed to upload file. Please try again.';
-                $evidencePath = null;
+            // Detect the REAL file type from its contents. The browser-supplied
+            // $_FILES['type'] is untrusted and often wrong (e.g. image/jpg,
+            // application/octet-stream) for files downloaded from the web.
+            $finfo = new finfo(FILEINFO_MIME_TYPE);
+            $mime  = (string) $finfo->file($file['tmp_name']);
+
+            $aliases = [
+                'image/jpg'       => 'image/jpeg',
+                'image/jfif'      => 'image/jpeg',
+                'image/pjpeg'     => 'image/jpeg',
+                'image/x-png'     => 'image/png',
+                'image/x-ms-bmp'  => 'image/bmp',
+            ];
+            $mime = $aliases[$mime] ?? $mime;
+
+            $extByMime = [
+                'image/jpeg'        => 'jpg',
+                'image/png'         => 'png',
+                'image/gif'         => 'gif',
+                'image/webp'        => 'webp',
+                'image/avif'        => 'avif',
+                'image/bmp'         => 'bmp',
+                'application/pdf'   => 'pdf',
+            ];
+
+            if (!isset($extByMime[$mime])) {
+                $errors['evidence'] = 'Only image (JPG, PNG, GIF, WebP, AVIF, BMP) or PDF files are allowed.';
+            } else {
+                $uploadDir = __DIR__ . '/uploads/complaints';
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0755, true);
+                }
+                // Use an extension that matches the real contents, no matter what
+                // the original filename was (e.g. .webp/.jfif from Google/Windows).
+                $evidencePath = 'uploads/complaints/' . uniqid('ev_', true) . '.' . $extByMime[$mime];
+                if (!move_uploaded_file($file['tmp_name'], __DIR__ . '/' . $evidencePath)) {
+                    $errors['evidence'] = 'Failed to upload file. Please try again.';
+                    $evidencePath = null;
+                }
             }
         }
     }
@@ -70,17 +97,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $complaintId = generate_complaint_id();
 
         $stmt = db()->prepare(
-            "INSERT INTO complaints (complaint_id, user_id, title, description, category, anonymous, status, evidence)
-             VALUES (:cid, :uid, :title, :desc, :cat, :anon, 'pending', :evidence)"
+            "INSERT INTO complaints (complaint_id, user_id, title, description, category_id, status_id, anonymous, evidence)
+             VALUES (:cid, :uid, :title, :desc, :cat_id, :status_id, :anon, :evidence)"
         );
         $stmt->execute([
-            ':cid'      => $complaintId,
-            ':uid'      => (int) $current_user['id'],
-            ':title'    => $title,
-            ':desc'     => $description,
-            ':cat'      => $category,
-            ':anon'     => $anonymous,
-            ':evidence' => $evidencePath,
+            ':cid'       => $complaintId,
+            ':uid'       => (int) $current_user['id'],
+            ':title'     => $title,
+            ':desc'      => $description,
+            ':cat_id'    => category_id_by_name($category),
+            ':status_id' => status_id_by_name('pending'),
+            ':anon'      => $anonymous,
+            ':evidence'  => $evidencePath,
         ]);
 
         set_flash('success', 'Complaint submitted successfully. Your Complaint ID is ' . $complaintId);
@@ -129,9 +157,9 @@ include __DIR__ . '/includes/header.php';
 
         <div class="form-group <?php echo isset($errors['evidence']) ? 'invalid' : ''; ?>">
           <label for="evidence">Upload Evidence (optional)</label>
-          <input type="file" id="evidence" name="evidence" accept="image/jpeg,image/png,image/gif,image/webp,application/pdf" style="height:auto;padding:12px 16px;" />
-          <span class="field-error"><?php echo e($errors['evidence'] ?? 'Only JPG, PNG, GIF, WebP or PDF files are allowed (max 5MB).'); ?></span>
-          <small style="color:var(--muted);font-size:0.78rem;margin-top:4px;display:block;">Attach a photo or document as evidence. Max 5MB.</small>
+          <input type="file" id="evidence" name="evidence" style="height:auto;padding:12px 16px;" />
+          <span class="field-error"><?php echo e($errors['evidence'] ?? 'Only image (JPG, PNG, GIF, WebP, AVIF, BMP) or PDF files are allowed (max 5MB).'); ?></span>
+          <small style="color:var(--muted);font-size:0.78rem;margin-top:4px;display:block;">Attach a photo or document as evidence. Photos downloaded from Google (WebP/JFIF) are supported. Max 5MB.</small>
         </div>
 
         <label class="checkbox-group" for="anonymous">

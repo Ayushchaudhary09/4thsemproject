@@ -11,7 +11,7 @@ start_session();
 
 // Already logged in? Redirect accordingly.
 if (isset($_SESSION['user_id'])) {
-    redirect(in_array($_SESSION['role'], ['admin', 'super_admin'], true) ? 'admin/dashboard.php' : 'dashboard.php');
+    redirect(($_SESSION['account'] ?? 'user') === 'admin' ? 'admin/dashboard.php' : 'dashboard.php');
 }
 
 $errors = [];
@@ -24,14 +24,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($email === '' || $password === '') {
         $errors['general'] = 'Invalid email or password.';
     } else {
+        // Look for the account in the user table first, then the admin table.
+        $account = 'user';
         $stmt = db()->prepare(
             "SELECT id, full_name, email, password, phone, role, status
-             FROM users WHERE email = :email LIMIT 1"
+             FROM user WHERE email = :email LIMIT 1"
         );
         $stmt->execute([':email' => $email]);
         $user = $stmt->fetch();
 
-        if (!$user || !password_verify($password, $user['password'])) {
+        if (!$user) {
+            $account = 'admin';
+            $stmt = db()->prepare(
+                "SELECT id, full_name, email, password, phone, role, status
+                 FROM admin WHERE email = :email LIMIT 1"
+            );
+            $stmt->execute([':email' => $email]);
+            $user = $stmt->fetch();
+        }
+
+        if (!$user || $password !== $user['password']) {
             $errors['general'] = 'Invalid email or password.';
         } elseif ($user['status'] !== 'active') {
             $errors['general'] = 'Your account has been deactivated. Contact the administrator.';
@@ -39,11 +51,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Regenerate to prevent session fixation
             session_regenerate_id(true);
 
-            $_SESSION['user_id'] = (int) $user['id'];
-            $_SESSION['role']    = $user['role'];
+            $_SESSION['user_id']  = (int) $user['id'];
+            $_SESSION['role']     = $user['role'];
+            $_SESSION['account']  = $account;
 
             set_flash('success', 'Login successful. Welcome back!');
-            redirect(in_array($user['role'], ['admin', 'super_admin'], true) ? 'admin/dashboard.php' : 'dashboard.php');
+            redirect($account === 'admin' ? 'admin/dashboard.php' : 'dashboard.php');
         }
     }
 }
@@ -69,8 +82,8 @@ include __DIR__ . '/includes/navbar.php';
           <div class="info-feature-card">
             <span class="info-feature-icon"><i class="fa-solid fa-shield-halved"></i></span>
             <div>
-              <h4>Secure</h4>
-              <p>Your concerns are protected with encrypted passwords and sessions.</p>
+              <h4>Simple & Direct</h4>
+              <p>Raise concerns through a clear, transparent process and get them resolved.</p>
             </div>
           </div>
           <div class="info-feature-card">
